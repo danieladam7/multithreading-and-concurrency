@@ -1,0 +1,84 @@
+package bgu.spl.mics.application.services;
+
+import bgu.spl.mics.MicroService;
+import bgu.spl.mics.application.messages.PublishConferenceBroadcast;
+import bgu.spl.mics.application.messages.PublishResultsEvent;
+import bgu.spl.mics.application.messages.TickBroadcast;
+import bgu.spl.mics.application.objects.ConfrenceInformation;
+import bgu.spl.mics.application.objects.Model;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Conference service is in charge of
+ * aggregating good results and publishing them via the {@link PublishConferenceBroadcast},
+ * after publishing results the conference will unregister from the system.
+ * This class may not hold references for objects which it is not responsible for.
+ *
+ * You can add private fields and public methods to this class.
+ * You MAY change constructor signatures and even add new public constructors.
+ */
+public class ConferenceService extends MicroService {
+    private int date;
+    private int currTime;
+    private ConfrenceInformation conferenceInformation;
+    private HashMap<String,Model> successful;
+    public ConferenceService(String name) {
+        super(name);
+        currTime=0;
+    }
+
+    public ConferenceService(String name, ConfrenceInformation conferenceInformation) {
+        super(name);
+        this.currTime = 0;
+        this.conferenceInformation = conferenceInformation;
+        date = conferenceInformation.getDate();
+        successful= new HashMap<>();
+    }
+
+    @Override
+    protected void initialize() {
+        subscribeBroadcast(TickBroadcast.class,(b)-> {
+            currTime+=1;
+            if(currTime==date){
+                System.out.println(getName()+" publishing");
+                sendBroadcast(new PublishConferenceBroadcast(successful.values()));
+                terminate();
+            }
+        });
+        subscribeEvent(PublishResultsEvent.class,(p)->{
+            Model model=p.getModel();
+            System.out.println(getName()+"got results from "+p.getStudent().getName());
+            if(model.isGood()){
+                successful.put(model.getName(),model);
+            }
+            complete(p,1);
+        });
+    }
+
+    public int getDate() {
+        return date;
+    }
+
+    public void setDate(int date) {
+        this.date = date;
+    }
+
+    public int getCurrTime() {
+        return currTime;
+    }
+
+    public void setCurrTime(int currTime) {
+        this.currTime = currTime;
+    }
+
+    public ConfrenceInformation getConferenceInformation() {
+        return conferenceInformation;
+    }
+
+    public void setConferenceInformation(ConfrenceInformation conferenceInformation) {
+        this.conferenceInformation = conferenceInformation;
+    }
+}
