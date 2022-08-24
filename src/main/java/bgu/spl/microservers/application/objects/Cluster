@@ -1,0 +1,361 @@
+package bgu.spl.mics.application.objects;
+
+
+import java.util.Collection;
+import java.util.Queue;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * Passive object representing the cluster.
+ * <p>
+ * This class must be implemented safely as a thread-safe singleton.
+ * Add all the fields described in the assignment as private fields.
+ * Add fields and methods to this class as you see fit (including public methods and constructors).
+ */
+
+/* TODO:
+ * 	1. Add Methods as needed.
+ * 	2. start with Implementing the GPU service and the CPU service.
+ *  3. every time that you feel that you must have the cluster - create new methods there
+ * 	4. Watch GhostCluster :)
+ */
+public class Cluster {
+
+	//private final ConcurrentHashMap<Data,Queue<DataBatch>> ProcessingData;
+	private final Object lock=new Object();
+	//private final ConcurrentHashMap<Data.Type,LinkedBlockingQueue<DataBatch>> typeHashMap;
+	private final LinkedBlockingQueue<DataBatch> dataBatches;
+	private final LinkedBlockingQueue<GPU> gpus;
+	private final LinkedBlockingQueue<CPU> cpus;
+	private final ConcurrentHashMap<Data,GPU> dataGPUHelper;
+	private final ConcurrentHashMap<GPU,Queue<DataBatch>> GPUTrainingQueue;
+	private final AtomicInteger numData;
+	private Statistics statistics=Statistics.getInstance();
+	private Scheduler scheduler;
+	private volatile boolean terminate;
+	/*
+	private final PriorityBlockingQueue<CPU> cpus;
+	private final LinkedBlockingQueue<CPU> bestCPUs;
+	private final LinkedBlockingQueue<CPU> otherCpus;
+	private final PriorityBlockingQueue<Data> dataByTime;
+	private final ConcurrentHashMap<Data.Type,PriorityBlockingQueue<DataBatch>> typeHashMap;
+	private final ConcurrentHashMap<Data, ConcurrentHashMap<CPU,Integer>> Priority;
+	private final ConcurrentHashMap<CPU,LinkedBlockingQueue<DataBatch>> cpuQueue;
+	private final AtomicBoolean hasData;
+	creqte every method that will need the GPU/CPU.
+
+	 */
+	private static class ClusterHolder{
+		private static final Cluster instance=new Cluster();
+	}
+	private Cluster(){
+		dataBatches=new LinkedBlockingQueue<>();
+		dataGPUHelper=new ConcurrentHashMap<>();
+		GPUTrainingQueue=new ConcurrentHashMap<>();
+		/*
+		typeHashMap=new ConcurrentHashMap<>(3);
+		typeHashMap.put(Data.Type.Images,new LinkedBlockingQueue<>());
+		typeHashMap.put(Data.Type.Text,new LinkedBlockingQueue<>());
+		typeHashMap.put(Data.Type.Tabular,new LinkedBlockingQueue<>());*/
+		numData=new AtomicInteger(0);
+		gpus=new LinkedBlockingQueue<>();
+		cpus=new LinkedBlockingQueue<>();
+		terminate=false;
+		//ProcessingData=new ConcurrentHashMap<>();
+		//dataByTime=new PriorityBlockingQueue<>(50, Comparator.comparingInt(Data::getOptimalProcessingTime));
+		//Priority=new ConcurrentHashMap<>();
+		//cpus=new PriorityBlockingQueue<>(50, (cpu, t1) -> Integer.compare(t1.getCores(),cpu.getCores()));
+		//bestCPUs=new LinkedBlockingQueue<>();
+		//cpuQueue=new ConcurrentHashMap<>();
+		//hasData =new AtomicBoolean(false);
+
+
+		//typeHashMap.put(Data.Type.Images,new PriorityBlockingQueue<>(100, Comparator.comparingInt(DataBatch::getInsertedTick)));
+		//typeHashMap.put(Data.Type.Text,new PriorityBlockingQueue<>(100, Comparator.comparingInt(DataBatch::getInsertedTick)));
+		//typeHashMap.put(Data.Type.Tabular,new PriorityBlockingQueue<>(100, Comparator.comparingInt(DataBatch::getInsertedTick)));
+
+		//otherCpus=new LinkedBlockingQueue<>();
+	}
+	public void SetCluster(Collection<GPU> gpuCollection, Collection<CPU> cpuCollection,Scheduler scheduler) {
+		this.scheduler=scheduler;
+		for(GPU gpu:gpuCollection){
+			GPUTrainingQueue.put(gpu,new LinkedBlockingQueue<>());
+		}
+		gpus.addAll(gpuCollection);
+		cpus.addAll(cpuCollection);
+	}
+
+	public void InitialRegister(Data data,GPU gpu){
+		if(!terminate) {
+			dataGPUHelper.putIfAbsent(data, gpu);
+			numData.incrementAndGet();
+		}
+		/*
+		if(data.getModel().getName().equals("YOLO9000")) {
+			System.out.println("YOLO9000 was signed here");
+			System.out.println(dataGPUHelper.get(data).toString());
+		}
+
+		 */
+		//ProcessingData.putIfAbsent(data, new LinkedBlockingQueue<>());
+		//data.setOptimalProcessingTime(scheduler.calcOptimalData(data, num));
+		//dataByTime.add(data);
+		//Priority.put(data,scheduler.setPriority(data,cpus,dataBatches.size()));
+
+	}
+
+	public void sendUnprocessedData(Data data,Queue<DataBatch> dataBatches) {
+		if (!terminate)
+			synchronized (this.dataBatches) {
+			/*
+			if(data.getModel().getName().equals("YOLO9000")){
+				System.out.println("adding YOLO9000's "+dataBatches.size()+" batches");
+				System.out.println("dataBatches before \n"+this.dataBatches.toString());
+			}*/
+				this.dataBatches.addAll(dataBatches);
+				this.dataBatches.notifyAll();
+			}
+		//synchronized (lock) {
+			//System.out.println(Thread.currentThread().getName()+" entered the monitor");
+			//synchronized (typeHashMap.get(data.getType())) {
+
+				//typeHashMap.get(data.getType()).addAll(dataBatches);
+			/*if(data.getModel().getName().equals("Bert")){
+				System.out.println("typeHashMap after \n"+typeHashMap.get(data.getType()));
+			}*/
+			//	typeHashMap.get(data.getType()).notifyAll();
+			//}
+			//lock.notifyAll();
+		//}
+	}
+
+
+	/*
+if (!typeHashMap.get(Data.Type.Images).isEmpty()) {
+    if (typeHashMap.get(Data.Type.Images).size() >= n) {
+        dataBatches.add(typeHashMap.get(Data.Type.Images).poll());
+        dataBatches.add(typeHashMap.get(Data.Type.Images).poll());
+    }else if(typeHashMap.get(Data.Type.Images).size() >= n-1)
+        dataBatches.add(typeHashMap.get(Data.Type.Images).poll());
+    dataBatches.add(typeHashMap.get(Data.Type.Images).poll());
+}/*else{
+    n=4;
+}*/
+
+/*
+				if (!typeHashMap.get(Data.Type.Images).isEmpty()) {
+					if (typeHashMap.get(Data.Type.Images).size() >= n) {
+						dataBatches.add(typeHashMap.get(Data.Type.Images).poll());
+						dataBatches.add(typeHashMap.get(Data.Type.Images).poll());
+					}else if(typeHashMap.get(Data.Type.Images).size() >= n-1)
+						dataBatches.add(typeHashMap.get(Data.Type.Images).poll());
+					dataBatches.add(typeHashMap.get(Data.Type.Images).poll());
+				}/*else{
+					n=4;
+				}*/
+
+
+
+	public void giveCPUJobs(CPU cpu) {
+		if (!terminate) {
+			LinkedBlockingQueue<DataBatch> dataBatches1 = new LinkedBlockingQueue<>();
+			int n = 3;
+		/*
+		if (cpu.getCores() == scheduler.getBestCPUCores()) {
+			//System.out.println(Thread.currentThread().getName()+ " is tryin to take "+typeHashMap.toString());
+			synchronized (typeHashMap.get(Data.Type.Images)) {
+				if(!typeHashMap.get(Data.Type.Images).isEmpty()) {
+					dataBatches1.add(typeHashMap.get(Data.Type.Images).poll());
+					n--;
+				}
+				//n=;
+				typeHashMap.get(Data.Type.Images).notifyAll();
+			}
+		}
+		*/
+
+			synchronized (this.dataBatches) {
+				while (this.dataBatches.isEmpty()) {
+					try {
+						//System.out.println(Thread.currentThread().getName()+" is here");
+						this.dataBatches.wait();
+					} catch (InterruptedException ignored) {
+					}
+				}
+				while (n != 0 && !this.dataBatches.isEmpty()) {
+					DataBatch dataBatch = this.dataBatches.poll();
+				/*
+				if(dataBatch.getData().getModel().getName().equals("YOLO9000"))
+					System.out.println("inserting dataBatch number"+dataBatch.getStart_index()+"dataBatches after \n"+this.dataBatches.toString());
+				*/
+					dataBatches1.add(dataBatch);
+					n--;
+				}
+				//System.out.println(this.dataBatches.size());
+				this.dataBatches.notifyAll();
+			}
+/*
+		if(dataBatches1.isEmpty())
+			System.out.println("CPU "+Thread.currentThread().getName()+" got empty queue");
+*/
+			cpu.getUnprocessedData(dataBatches1);
+		}
+	}
+
+	public void sendToCPU(Data data,DataBatch dataBatch) {
+		if (!terminate) {
+			synchronized (this.dataBatches) {
+			/*
+			if(dataBatch.getData().getModel().getName().equals("YOLO9000"))
+				System.out.println("dataBatches after \n"+this.dataBatches.toString());
+			*/
+				dataBatches.add(dataBatch);
+				this.dataBatches.notifyAll();
+			}
+		/*if(data.getModel().getName().equals("Bert")) {
+			System.out.println("cluster got data batch "+dataBatch.getStart_index());
+		}*/
+			//synchronized (lock){
+			//System.out.println(Thread.currentThread().getName()+" has entered the monitor");
+			//synchronized (typeHashMap.get(data.getType())) {
+			//typeHashMap.get(data.getType()).add(dataBatch);
+			//typeHashMap.get(data.getType()).notifyAll();
+			//}
+			//	lock.notifyAll();
+			//}
+		}
+	}
+
+	public void sendBacktoGPU(DataBatch dataBatch){
+		if(!terminate) {
+			GPU gpu = dataGPUHelper.get(dataBatch.getData());
+			synchronized (GPUTrainingQueue.get(gpu)) {
+/*
+			if(dataBatch.getData().getModel().getName().equals("YOLO9000"))
+				System.out.println("Trying to add YOLO9000's data batch "+dataBatch.getStart_index()+" back to gpu");
+*/
+				if (gpu.numTrainingBatch() == gpu.getVramSize()) {
+
+				/*
+				if(dataBatch.getData().getModel().getName().equals("YOLO9000")) {
+					System.out.println("inserted YOLO9000's data batch " + dataBatch.getStart_index() + " to gpu's cluster queue");
+					System.out.println("GPUTrainingQueue.get(gpu) before: "+GPUTrainingQueue.get(gpu).toString());
+				}
+*/
+					GPUTrainingQueue.get(gpu).add(dataBatch);
+/*
+				if(dataBatch.getData().getModel().getName().equals("YOLO9000")) {
+					System.out.println("GPUTrainingQueue.get(gpu) after: "+GPUTrainingQueue.get(gpu).toString());
+				}
+*/
+				} else {
+				/*
+				if(dataBatch.getData().getModel().getName().equals("YOLO9000"))
+				System.out.println("YOLO9000's data batch "+dataBatch.getStart_index()+" is being inserted to gpu's queue "+gpu.getName());
+*/
+					gpu.getProcessedBatches(dataBatch);
+
+					while (!GPUTrainingQueue.get(gpu).isEmpty() && gpu.numTrainingBatch() < gpu.getVramSize()) {
+						DataBatch dataBatch1 = GPUTrainingQueue.get(gpu).poll();
+/*
+					if(dataBatch1.getData().getModel().getName().equals("YOLO9000"))
+						System.out.println("YOLO9000's data batch "+dataBatch.getStart_index()+" is being inserted to gpu's queue"+gpu.getName());
+*/
+						gpu.getProcessedBatches(dataBatch1);
+					}
+				}
+				GPUTrainingQueue.get(gpu).notifyAll();
+			}
+		}
+	}
+
+	public void unlockGPU(GPU gpu){
+		synchronized (GPUTrainingQueue.get(gpu)){
+			while(!GPUTrainingQueue.get(gpu).isEmpty()&& gpu.numTrainingBatch() < gpu.getVramSize()){
+
+				DataBatch dataBatch1 = GPUTrainingQueue.get(gpu).poll();
+
+				/*
+				if(dataBatch1.getData().getModel().getName().equals("YOLO9000"))
+					System.out.println("YOLO9000's data batch "+dataBatch1.getStart_index()+" is being inserted to gpu's queue"+gpu.getName());
+
+				 */
+				gpu.getProcessedBatches(dataBatch1);
+
+			}
+
+			GPUTrainingQueue.get(gpu).notifyAll();
+		}
+	}
+	public void unlockCPU(CPU cpu){
+		synchronized (dataBatches){
+			if(cpu.getDataBatchesSize()==0)
+				giveCPUJobs(cpu);
+			dataBatches.notifyAll();
+		}
+	}
+	public void FinishedTraining(Data data) {
+		dataGPUHelper.remove(data);
+		numData.decrementAndGet();
+		//ProcessingData.remove(data);
+	}
+	//end
+	//end
+	public void terminateGPU(GPU gpu){
+		dataGPUHelper.remove(gpu.getModel().getData());
+		GPUTrainingQueue.get(gpu).clear();
+	}
+
+	/**
+	 * Retrieves the single instance of this class.
+	 */
+	public static Cluster getInstance() {
+		return ClusterHolder.instance;
+	}
+
+	public Statistics getStatistics() {
+		return statistics;
+	}
+
+	public void setStatistics(Statistics statistics) {
+		this.statistics = statistics;
+	}
+
+	public ConcurrentHashMap<Data, GPU> getDataGPUHelper() {
+		return dataGPUHelper;
+	}
+
+	public ConcurrentHashMap<GPU, Queue<DataBatch>> getGPUTrainingQueue() {
+		return GPUTrainingQueue;
+	}
+
+	public Scheduler getScheduler() {
+		return scheduler;
+	}
+	public LinkedBlockingQueue<GPU> getGpus() {
+		return gpus;
+	}
+
+	public LinkedBlockingQueue<CPU> getCpus() {
+		return cpus;
+	}
+	public void terminate(){
+		dataBatches.clear();
+		dataGPUHelper.clear();
+		GPUTrainingQueue.clear();
+		System.out.println("done");
+		terminate=true;
+	}
+	@Override
+	public String toString() {
+		return "Cluster{" +
+				"GPUTrainingQueue=" + GPUTrainingQueue.values().toString() +
+				'}';
+	}
+}
+// GPU <- Cluster (give me Batches)
+// get objects sorted by size
+//compareandset - the cluster gets the entire data but the cpu asks for a calculated number of clusters
+//look at it from the cpu.
+// heap the gpu for the training.
