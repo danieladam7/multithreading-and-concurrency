@@ -1,0 +1,50 @@
+package bgu.spl.mics;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.Assert.*;
+
+public class FutureTest {
+    Future<Integer> integerFuture;
+    @Before
+    public void setUp() throws Exception{
+        integerFuture=new Future<>();
+    }
+
+    @After
+    public void tearDown() throws Exception{
+        integerFuture=null;
+    }
+    @Test
+    public void testGet() {
+        integerFuture.resolve(4);
+        int x=4;
+        assertEquals(x, (int) integerFuture.get());
+    }
+
+    @Test
+    public void testResolve() {
+        boolean pre=integerFuture.isDone();
+        integerFuture.resolve(4);
+        assertNotEquals(integerFuture.isDone(),pre);
+    }
+
+    @Test
+    public void testIsDone() {
+        integerFuture.resolve(4);
+        assertNotNull(integerFuture.get());
+    }
+
+    @Test
+    public void testGet2() {
+        integerFuture.resolve(4);
+        int x=4;
+        long start=System.currentTimeMillis();
+        Integer result=integerFuture.get(1000,TimeUnit.MILLISECONDS);
+        assertTrue(start+1000<=System.currentTimeMillis());
+    }
+}
