@@ -1,0 +1,60 @@
+package bgu.spl.mics.application.objects;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.util.*;
+
+import static org.junit.Assert.*;
+
+public class CPUTest {
+    CPU cpuTest;
+    Cluster cluster;
+    @Before
+    public void setUp() throws Exception {
+        cluster=Cluster.getInstance();
+        cpuTest=new CPU(128);
+    }
+
+    @After
+    public void tearDownTest() throws Exception {
+        cluster=null;
+        cpuTest=null;
+    }
+    @Test
+    public void increaseTickTest() {
+        int currTime=0;
+        cpuTest.increaseTick();
+        assertNotEquals(cpuTest.getTime(),currTime);
+    }
+
+    @Test
+    public void getUnprocessedDataTest() {
+        ArrayList<DataBatch> dataBatches=new ArrayList<>(0);
+        Data testData = new Data(Data.Type.Images,5000);
+        dataBatches.add( new DataBatch(testData,0,0));
+        //cpuTest.getUnprocessedData(dataBatches);
+        assertNotEquals(0,dataBatches.size());
+    }
+
+    @Test
+    public void sendProcessedDataTest() {
+        //int size=cpuTest.getDataBatchQueue().size();
+        cpuTest.sendProcessedData();
+        //assertNotEquals(size,0);
+    }
+    @Test
+    public void getDataTest(){
+        ArrayList<DataBatch> dataBatches=new ArrayList<>(0);
+        Data testData = new Data(Data.Type.Images,5000);
+        dataBatches.add( new DataBatch(testData,0,0));
+        //cpuTest.getUnprocessedData(dataBatches);
+        //assertNotNull(cpuTest.getDataBatchQueue());
+    }
+    public void getTimeTest(){
+        int startTime= cpuTest.getTime();
+        cpuTest.increaseTick();
+        assertNotEquals(startTime,cpuTest.getTime());
+    }
+}
